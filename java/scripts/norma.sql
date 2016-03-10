@@ -1,0 +1,1 @@
+Select login, password From USR Where login='Norma';
