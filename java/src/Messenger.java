@@ -554,37 +554,49 @@ public class Messenger {
       DisplayEndTitle(menuTitle);
    }
 
+   public static void DisplayContacts(Messenger esql, String authorisedUser, boolean flag)
+   {
+      try
+      {
+        String query = 
+        "SELECT ULC.list_member " +
+        "FROM USER_LIST_CONTAINS ULC, USR U " + 
+        "WHERE U.contact_list = ULC.list_id AND U.login = '" + authorisedUser + "';";
+
+        //Returns # of fitting results
+        //HAVE TO USE executeQueryAndReturnResult, no not use executeQuery
+        List<List<String>> result = esql.executeQueryAndReturnResult(query);
+        if(result.size() == 0)
+          System.out.println("\tYou have no friends. :(");
+        else
+        {
+          if (flag)
+            System.out.println("\tYou have " + result.size() + " friends.\n");
+
+          String output = "";
+          int count = 0;
+          for(List<String> list : result)
+          {
+            ++count;
+            for(String word : list)
+              // output+="\t"+count +". "+ word.trim() + "\n";
+              output += "\t" + word.trim() + "\n";
+          }
+            System.out.println(output);
+        }
+      }
+      
+      catch(Exception e)
+      {
+        System.err.println (e.getMessage ());
+      }
+   }
+
    //Try to get this to alphabetical order. Use Indexes.
    public static void ListContacts(Messenger esql,String authorisedUser){
         String menuTitle = "Your Contacts";
         DisplayMenuTitle(menuTitle);
-
-        try{
-          String query = 
-          "SELECT ULC.list_member " +
-          "FROM USER_LIST_CONTAINS ULC, USR U " + 
-          "WHERE U.contact_list = ULC.list_id AND U.login = '" + authorisedUser + "';";
-
-          //Returns # of fitting results
-          //HAVE TO USE executeQueryAndReturnResult, no not use executeQuery
-          List<List<String>> result = esql.executeQueryAndReturnResult(query);
-          if(result.size() == 0){
-        System.out.println("\tYou have no friends. :(");
-          }else{
-            String output = "";
-            int count = 0;
-            for(List<String> list : result)
-            {
-              ++count;
-          for(String word : list)
-          output+="\t"+count +". "+ word.trim() + "\n";
-        }
-            System.out.println(output);
-        }
-        }catch(Exception e){
-          System.err.println (e.getMessage ());
-        }
-
+        DisplayContacts(esql, authorisedUser, true);
         DisplayEndTitle(menuTitle);     
     }
 
@@ -664,7 +676,7 @@ public class Messenger {
 
   /* Steph's: Note: The only thing I changed for ListChats was how I formatted the display.
    */
-   public static void ListChats(Messenger esql, String authorisedUser)
+   public static boolean ListChats(Messenger esql, String authorisedUser)
    {
       String menuTitle = "Your Chats";
       DisplayMenuTitle(menuTitle);
@@ -678,7 +690,9 @@ public class Messenger {
 
         List<List<String>> result = esql.executeQueryAndReturnResult(query);
           if(result.size() == 0){
-            System.out.println("You have no chats. :(");
+            System.out.println("\tYou have no chats. :(");
+            DisplayEndTitle(menuTitle);   
+            return false;
           }else{
 
             DisplayChatTable();
@@ -713,9 +727,9 @@ public class Messenger {
           System.out.print(output);
           output="";
         }
-           System.out.println("\t===============================================\n");
 
-        }
+
+      }
 
 
       catch(Exception e)
@@ -724,6 +738,7 @@ public class Messenger {
       }
 
       DisplayEndTitle(menuTitle);   
+      return true;
 
    }
 
@@ -738,12 +753,14 @@ public class Messenger {
         System.out.println("\t===================================");
         System.out.println("\t1. Enter a Chat");
         System.out.println("\t2. Create a New Chat");
+        System.out.println("\t3. Delete a Chat");
         System.out.println("\t===================================");
         System.out.println("\t9. Leave Chat Interface");
 
         switch(readChoice()){
           case 1: EnterChat(esql, authorisedUser); break;
           case 2: CreateChat(esql, authorisedUser); break;
+          case 3: DeleteChat(esql, authorisedUser); break;
           case 9: chatInterfacing = false; break;
           default : System.out.println("Unrecognized Choice!"); break;
         }
@@ -759,7 +776,8 @@ public class Messenger {
     try
     {
 
-      ListChats(esql, authorisedUser);
+      if (!ListChats(esql, authorisedUser))
+        return;
 
       boolean invalidChatID = true;
       int chatID = -1;
@@ -796,7 +814,7 @@ public class Messenger {
 
         if (messagesLoaded)
         {
-          System.out.println ("\tPast messages have been loaded.");
+          System.out.println ("\tPast 10 messages have been loaded. ");
           messagesLoaded = false;
         }
 
@@ -836,14 +854,162 @@ public class Messenger {
 
   //CREATE CHAT MADE BY KOALA
   public static void CreateChat(Messenger esql, String authorisedUser){
+    String title = "Create a New Chat";
+    DisplayMenuTitle(title);
+
     try
     {
-      System.out.println("Here lies the Create Chat function");
+      String nextChatIDquery = "SELECT chat_id FROM chat ORDER BY chat_id DESC LIMIT 1";
+      List<List<String>> result = esql.executeQueryAndReturnResult(nextChatIDquery);
+
+      int newChatID = Integer.parseInt(result.get(0).get(0)) + 1;
+
+      String query = String.format("INSERT INTO CHAT (chat_id, chat_type, init_sender) VALUES (%d, 'private', '%s')", newChatID, authorisedUser);
+      esql.executeUpdate(query);
+
+      String query1 = String.format("INSERT INTO chat_list (chat_id, member) VALUES (%d, '%s')", newChatID, authorisedUser);
+      esql.executeUpdate(query1);
+
+      // display contact list and prompt
+      DisplayContacts(esql, authorisedUser, false);
+      System.out.println("Who do you want to add to the chat? Type 'done' when finished adding.");
+
+      boolean doneAdding = false;
+      int groupSize = 0;
+
+      while(!doneAdding)
+      {
+        System.out.print("\t");
+        String newUser = in.readLine();
+
+        if (newUser.equals("done"))
+          break;
+ 
+        String checkUserQuery = String.format("SELECT ULC.list_member FROM USER_LIST_CONTAINS ULC, USR U WHERE U.contact_list = ULC.list_id AND U.login = '%s' AND ULC.list_member = '%s'", authorisedUser, newUser);
+        int result1 = esql.executeQuery(checkUserQuery);
+
+        if (result1 == 0)
+          System.out.println("\t" + newUser + " is an invalid user!\n");
+
+        else
+        {
+          String query2 = String.format("INSERT INTO chat_list (chat_id, member) VALUES (%d, '%s')", newChatID, newUser);
+          esql.executeUpdate(query2);
+          System.out.println("\t" + newUser + " has been added to chat #" + newChatID + "\n");
+          groupSize++;
+        }
+
+      }
+
+      if (groupSize > 1)
+      {
+        String query3 = String.format ("UPDATE chat SET chat_type = 'group' WHERE chat_id = %s", newChatID);
+        esql.executeUpdate(query3);
+      }
+
+      System.out.println("\tChat #" + newChatID + " created.");
+
+
     }
     catch(Exception e)
     {
       System.err.println(e.getMessage());
     }
+
+    DisplayEndTitle(title);
+  }
+
+  public static void DeleteChat(Messenger esql, String authorisedUser)
+  {
+    String title = "Delete a Chat";
+    DisplayMenuTitle(title);
+
+    try
+    {
+      // first, find all of the chats that they own using init sender. List those chats.
+      String query1 = String.format("SELECT * FROM CHAT WHERE init_sender = '%s'", authorisedUser);
+      List<List<String>> chatList = esql.executeQueryAndReturnResult(query1);
+
+      if(chatList.size() == 0)
+      {
+        System.out.println("\tYou have no chats. :(");
+        DisplayEndTitle(title);   
+        return;
+      }
+      else
+      {
+        DisplayChatTable();
+
+        String output = "";
+        int count = 0;
+
+        // rows
+        for(List<String> list : chatList)
+        {
+          ++count;
+          //String rowString = count + ". ";
+          String rowString = "";
+          output +="\t" + rowString;
+
+          // columns
+          for(int i=0;i<list.size();++i)
+          {
+            if(i==list.size()-1)
+              output+=list.get(i).trim();
+            else
+            {
+                String listItem = list.get(i).trim();
+
+                //output+=list.get(i).trim() + ", ";
+                output +=  listItem + FormatChatTableRow (rowString, listItem, i) + " ";
+
+            }
+          } // end of for loop columns
+
+          output += "\n";
+
+        } // end of for loop rows
+
+        System.out.println(output);
+      } // end of else
+
+      // then, ask them to pick a chat. then check if the chat exists with the current user and chat id from input
+      System.out.print("\tSelect a chat to delete: ");
+      String chatID = in.readLine();
+      String query2 = String.format("SELECT * FROM CHAT WHERE chat_id = %s AND init_sender = '%s'", chatID, authorisedUser);
+
+      // then execute query, check if that chat exists. if true, delete all messages first where chat_id = input_chatID
+      int count = esql.executeQuery(query2);
+      if (count == 0)
+        System.out.println("\tInvalid chat #!");
+
+      else
+      {
+        // then delete from message -> chat_list -> chat
+        String query3 = String.format("DELETE FROM MESSAGE WHERE chat_id = %s", chatID);
+        esql.executeUpdate(query3);
+        System.out.println("\tMessages from chat #" + chatID + " deleted.");
+
+        // then delete the entries in chat_list
+        String query4 = String.format("DELETE FROM CHAT_LIST WHERE chat_id = %s", chatID);
+        esql.executeUpdate(query4);
+        System.out.println("\tRemoving members from chat #" + chatID);
+
+        // then delete the chat
+        String query5 = String.format("DELETE FROM CHAT WHERE chat_id = %s", chatID);
+        esql.executeUpdate(query5);
+        System.out.println("\tChat #" + chatID + " deleted.");
+      }
+
+
+    }
+
+    catch (Exception e)
+    {
+      System.err.println(e.getMessage());
+    }
+
+    DisplayEndTitle(title);
   }
 
   /* Call this function to format the messages.
