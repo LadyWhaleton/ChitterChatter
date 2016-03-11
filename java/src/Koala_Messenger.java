@@ -749,3 +749,149 @@ public class Messenger {
                         //5. usr (delete the user using login)
 
                 //Set usermenu variable to false and return it
+
+
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~`
+//REFERENCE TO MY DELETE MEMBERS
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+//ENTER CHAT
+ //       try{
+ //              if(currNumMembers == 1){
+ //                       System.out.println("There are no members for you to delete!");
+  //                      return currNumMembers;
+   //             }
+
+  //              else{
+                        //System.out.println("Insert Delete Chat Member Function Here");
+                        //Check if more than 2 members
+                        //If > 2 members then update the chat entry in chat table with group instead of private
+
+   //                     System.out.println("Who would you like to delete (not recommended if there is only one other member unless you're antisocial!");
+
+     //                   System.out.println("Here is a list of members in your chat: ");
+      //                  System.out.println("-------------------------------------------------------");
+
+        //                String getChatUserQuery = "SELECT member FROM chat_list WHERE chat_id = '" + chatID + "' AND member NOT IN ('" + currUser + "')";
+          //              esql.executeQueryAndPrintResult(getChatUserQuery);
+
+            //            String chatUserToDelete = in.readLine();
+
+              //          String checkChatUserQuery = "SELECT member FROM chat_list WHERE chat_id = '" + chatID + "' AND member = '" + chatUserToDelete + "'";
+			// int userCount = esql.executeQuery(checkChatUserQuery);
+
+                       // if(userCount != 0){
+
+                         //       String deleteChatUserQuery = "DELETE FROM chat_list WHERE chat_id = '" + chatID + "' AND member = '" + chatUserToDelete + "'";
+                           //     esql.executeUpdate(deleteChatUserQuery);
+
+                             //   System.out.println("Here is your current list of chat users after the delete: ");
+                              //  System.out.println("-------------------------------------------------------------------");
+
+                                //esql.executeQueryAndPrintResult(getChatUserQuery);
+
+                             //   int newNumMembers = currNumMembers - 1;
+
+                               // if(newNumMembers < 3){
+                                //        String updatePrivateTypeQuery = "UPDATE chat SET chat_type = 'private' WHERE chat_id = '" + chatID + "'";
+                               //         esql.executeUpdate(updatePrivateTypeQuery);
+                            //    }
+
+                        //        return newNumMembers;
+                     //   }
+                      //  else{
+                       //         System.out.println("You have entered an invalid user!\n");
+                        //        return currNumMembers;
+                     //   }
+              //  }
+      //  }
+      //  catch(Exception e){
+      //          System.err.println(e.getMessage());
+      //  }
+
+   //     return currNumMembers;
+ //  }
+
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// DELETE USER 
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+ //  public static boolean DeleteAccount(Messenger esql, String currUser, boolean usermenu){
+       // try{
+          //      //Have a flag that contains external boolean value of usermenu
+            //    boolean keepUserMenu = usermenu;
+
+          //      //Have a flag that checks if any of the two conditions below have failed
+         //   boolean failConditions = false;
+
+           //     //1. Check if user is an owner of any chat (check init_sender in chat)
+          //              //Set flag to true if yes
+          //      String ownerQuery = "SELECT * FROM chat WHERE init_sender = '" + currUser + "'";
+           //     int ownerCount = esql.executeQuery(ownerQuery);
+
+         //       if(ownerCount != 0){
+       //                 failConditions = true;
+     //                   System.out.println("You are the owner of a chat!");
+          //      }
+
+        //        //2. Check if user has written any messages (check sender_login in message)
+      //                  //Set flag to true if yes
+      //          String writtenMsgQuery = "SELECT * FROM message WHERE sender_login = '" + currUser + "'";
+    //            int messageCount = esql.executeQuery(writtenMsgQuery);
+
+             //   if(messageCount != 0){
+             //           failConditions = true;
+            //            System.out.println("You have undeleted messages!");
+            //    }
+
+          //      //Check flag
+         //       //If true, then return out of function
+         //       if(failConditions == true){
+          //              System.out.println("You are not able to delete chat because of one or both of the reasons above.\n");
+           //             return usermenu;
+         //       }
+                //If false, delete in the following order:
+         //       else{
+         //               //Make sure you get block list and contact list IDs
+        //                String getBlockIDQuery = "SELECT block_list FROM usr WHERE login = '" + currUser + "'";
+      //                  List<List<String>> result_block = esql.executeQueryAndReturnResult(getBlockIDQuery);
+
+    //                    int userBlockID = Integer.parseInt(result_block.get(0).get(0));
+
+  //                      String getContactIDQuery = "SELECT contact_list FROM usr WHERE login = '" + currUser + "'";
+//                        List<List<String>> result_contact = esql.executeQueryAndReturnResult(getContactIDQuery);
+
+
+        //                int userContactID = Integer.parseInt(result_contact.get(0).get(0));
+
+                        //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+      //                  System.out.println("Deleting User from chats...\n");
+
+                        //1. chat_list (delete the user from chat rooms)
+  //                      String deleteUserFromChatQuery = "DELETE FROM chat_list WHERE member = '" + currUser + "'";
+    //                    esql.executeUpdate(deleteUserFromChatQuery);
+//
+
+        //                System.out.println("Deleting user info...\n");
+
+                        //2. usr (delete the user using login)
+       //                 String deleteUser = "DELETE FROM usr WHERE login = '" + currUser + "'";
+     //                   esql.executeUpdate(deleteUser);
+
+                        //Set usermenu variable to false and return it
+   //                     keepUserMenu = false;
+
+ //                       System.out.println("Logging user out.... Goodbye foreeeeever!\n");
+
+//                        return keepUserMenu;
+//                }
+//        }
+//        catch(Exception e){
+//                System.err.println(e.getMessage());
+//        }
+//
+//        return usermenu;
+//
+//   }
+

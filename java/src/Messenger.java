@@ -381,6 +381,18 @@ public class Messenger {
     System.out.print(border);
   }
 
+  public static String checkValidLogin(String login)
+  {
+    if (login.equals(""))
+      return "\n\tError: Login cannot be empty!";
+    else if (login.equals("done"))
+      return "\n\tError: 'done' cannot be used as a login!";
+    else if (Character.isDigit(login.charAt(0)))
+      return "\n\tError: Login cannot start with a digit!";
+    else 
+      return "ok";
+  }
+
    /*
     * Creates a new user with privided login, passowrd and phoneNum
     * An empty block and contact list would be generated and associated with a user
@@ -388,11 +400,23 @@ public class Messenger {
    public static void CreateUser(Messenger esql){
     String menuTitle = "Create a New Account";
     DisplayMenuTitle(menuTitle);
+    String login = "";
 
       try
       {
         System.out.print("\tEnter user login: ");
-        String login = in.readLine();
+        login = in.readLine();
+
+        String errorMessage = checkValidLogin(login);
+
+        if ( !(errorMessage.equals("ok")) )
+        {
+          System.out.println(errorMessage);
+          DisplayMenuTitle(menuTitle);
+          return;
+        }
+
+
         System.out.print("\tEnter user password: ");
         String password = in.readLine();
         System.out.print("\tEnter user phone: ");
@@ -409,12 +433,16 @@ public class Messenger {
           " VALUES ('%s','%s','%s',%s,%s)", phone, login, password, block_id, contact_id);
 
         esql.executeUpdate(query);
-        System.out.println ("User successfully created!");
+        System.out.println ("\n\tUser successfully created!");
       }
 
       catch(Exception e)
       {
-         System.err.println (e.getMessage ());
+        if (e.getMessage().contains("ERROR:  duplicate key violates"))
+          System.out.println("\n\tError: User " + login + " already exists!");
+
+        else
+          System.out.println ("\n\t" + e.getMessage ());
       }
 
       DisplayEndTitle(menuTitle);
@@ -617,13 +645,16 @@ public class Messenger {
         if(result.size() == 0){
       System.out.println("\tYou haven't blocked anyone yet.");
         }else{
+
+          System.out.println("\tYou blocked " + result.size() + " users.\n");
+
           String output = "";
           int count = 0;
           for(List<String> list : result)
           {
             ++count;
         for(String word : list)
-        output+="\t"+count +". "+ word.trim() + "\n";
+        output+="\t" + word.trim() + "\n";
       }
           System.out.println(output);
       }
@@ -814,7 +845,7 @@ public class Messenger {
 
         if (messagesLoaded)
         {
-          System.out.println ("\tPast 10 messages have been loaded. ");
+          System.out.println ("\tPast 10 messages have been loaded. Scroll up to view them.");
           messagesLoaded = false;
         }
 
@@ -838,7 +869,7 @@ public class Messenger {
           case 4: showNumMessages = LoadMessages(showNumMessages); messagesLoaded = true; break;
           case 9: inChat = false; break;
                                   
-          default : System.out.println("Unrecognized choice!"); break;
+          default : System.out.println("\tInvalid choice!"); break;
         } // end Switch
 
       } // end while (InChat)
@@ -869,6 +900,13 @@ public class Messenger {
 
       String query1 = String.format("INSERT INTO chat_list (chat_id, member) VALUES (%d, '%s')", newChatID, authorisedUser);
       esql.executeUpdate(query1);
+
+      // Create a dummy message which contains the dummy message's timestamp.
+      // This timestamp is used to determine when the chat was created.
+      // This dummy message will never be displayed and can never be deleted because:
+      // You will check if message timestamp == message text.
+      // The user cannot 'hack' this because their message will have different timestamp.
+      // This means I need to take care of these special cases in Edit, Delete, Display message.
 
       // display contact list and prompt
       DisplayContacts(esql, authorisedUser, false);
@@ -1144,7 +1182,7 @@ public class Messenger {
 
 
       if(result.size() == 0)
-        System.out.println("This chat has no messages.");
+        System.out.println("\tThis chat has no messages.");
 
       else
       {
