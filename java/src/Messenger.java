@@ -802,7 +802,7 @@ public class Messenger {
 
       while(inChat)
       {
-        ShowChatMessages(esql, authorisedUser, chatID, showNumMessages);
+        ShowChatMessages(esql, authorisedUser, chatID, chatIDChoice, showNumMessages);
 
         System.out.println("");
         System.out.println("\tChat #" + chatIDChoice + " Options");
@@ -834,10 +834,164 @@ public class Messenger {
       System.err.println(e.getMessage());
     }
   } // end EnterChat
+
+  /* Call this function to format the messages.
+   * [MSG_ID]                                          
+   *  _____________________________________
+   * | Sender | timestamp                  |
+   * |~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~|
+   * | Body                                |
+   * |                                     |
+   * |  ___________________________________|
+   * |/
+   * '
+   *
+   * 
+   *  _____________________________________
+   * | Sender | timestamp                  |
+   * |~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~|
+   * | Body                                |
+   * |                                     |
+   * |____________________________________ |
+   *                                      \|
+   *                                       '
+   */
+  public static void DisplayChatMessages(String msg_id, String body, String timestamp, String sender, String authorisedUser)
+  {
+    String bottom1;
+    String bottom2;
+    String bottom3;
+
+    boolean addTabs = false;
+
+    // check if sender == authorizedUSer
+    if (sender.equals(authorisedUser))
+    {
+      addTabs = true;
+      bottom1 = "|____________________________________";
+      bottom2 = "                                     ";
+      bottom3 = "                                      ";
+    }
+
+    else
+    {
+      bottom1 = "| ___________________________________";
+      bottom2 = "|/";
+      bottom3 = "'";
+    }
+
+    String topLine = " ____________________________________";
+    String squiggles = "|~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
+    String bubbleSpace = "                                   ";
+
+    int extraChar = 0;
+    String fillSpace = "";
+
+    // if this is true, you need to extend the chat bubble
+    // determine how many more underscores and spaces you need
+    if (bubbleSpace.length() < body.length())
+    {
+      extraChar = body.length() - bubbleSpace.length();
+
+
+      for (int i = 0; i < extraChar; i++)
+      {
+          topLine += "_";
+          squiggles += "~";
+          bubbleSpace += " ";
+
+          if (sender.equals(authorisedUser))
+          {
+            bottom1 += "_";
+            bottom2 += " ";
+            bottom3 += " ";
+          }
+
+          else
+            bottom1 += "_";
+
+      }
+    }
+
+    else
+    {
+      int numSpaces = bubbleSpace.length() - body.length();
+      for (int i = 0; i < numSpaces; i++)
+        fillSpace += " ";
+    }
+
+      String sendertimeLine = "| " + sender + " | " + timestamp;
+      int numSpacesBorder = bubbleSpace.length() - sender.length() - 3 - timestamp.length(); // num of spaces needed til "|"
+
+      // concatenate spaces for Sender | timestamp;
+      for (int j = 0; j < numSpacesBorder; j++)
+        sendertimeLine += " ";
+
+      String tab = "";
+
+      if (addTabs)
+        tab = "\t";
+
+      System.out.println(tab + "[ " + msg_id + " ]");
+      System.out.println(tab + topLine + "_");
+      System.out.println(tab + sendertimeLine + " |");
+      System.out.println(tab + squiggles + "~|");
+      System.out.println(tab + "| " + body + fillSpace + " |");
+      System.out.println(tab + "| " + bubbleSpace + " |");
+
+      if (sender.equals(authorisedUser))
+      {
+        System.out.println(tab + bottom1 + " |");
+        System.out.println(tab + bottom2 + "\\|");
+        System.out.println(tab + bottom3 + "'");
+      }
+
+      else
+      {
+        System.out.println(bottom1 + "_|");
+        System.out.println(bottom2);
+        System.out.println(bottom3);
+      }
+  }
   
   //SHOW CHAT MESSAGES MADE BY KOALA (this one shows all messages in a given chat)
-  public static void ShowChatMessages(Messenger esql, String authorisedUser, int chatID, int showNumMessages){
-    String messageDisplayQuery = "SELECT M.msg_id, M.msg_text, M.msg_timestamp, M.sender_login FROM message M WHERE M.chat_id = '" + chatID + "' ORDER BY M.msg_timestamp DESC LIMIT " + showNumMessages;
+  public static void ShowChatMessages(Messenger esql, String authorisedUser, int chatID, String chatIDChoice, int showNumMessages)
+  {
+    String menuTitle = "Chat #" + chatIDChoice + " Messages";
+    DisplayMenuTitle(menuTitle);
+    String query = "SELECT M.msg_id, M.msg_text, M.msg_timestamp, M.sender_login FROM message M WHERE M.chat_id = '" + chatID + "' ORDER BY M.msg_timestamp DESC LIMIT " + showNumMessages;
+
+    try
+    {
+      List<List<String>> result = esql.executeQueryAndReturnResult(query);
+
+
+      if(result.size() == 0)
+        System.out.println("This chat has no messages.");
+
+      else
+      {
+        String output = "";
+
+        // row
+        int numRows = result.size();
+        for(int i = numRows-1; i >= 0; i--)
+        {
+          List<String> row = result.get(i);
+          DisplayChatMessages(row.get(0).trim(), row.get(1).trim(), row.get(2).trim(), row.get(3).trim(), authorisedUser);
+
+        } // end for loop rows
+
+      } // end else
+
+    } // end try
+
+    catch(Exception e)
+    {
+      System.err.println (e.getMessage ());
+    }
+
+    DisplayEndTitle(menuTitle);
 
   //executeQueryAndReturnResult
   //and then format as you like :D
@@ -846,7 +1000,38 @@ public class Messenger {
 
   //WRITE NEW MESSAGE MADE BY KOALA (writes a new message)
   public static void WriteNewMessage(Messenger esql, String authorisedUser, int chatID){
+    String menuTitle = "Write a New Message";
+    DisplayMenuTitle(menuTitle);
 
+    try
+    {
+      // first, obtain the msg_id.
+      String query1 = "SELECT msg_id FROM message ORDER BY msg_id DESC LIMIT 1";
+      String timestampQuery = "SELECT LOCALTIMESTAMP(0)";
+
+      List<List<String>> result_msgID = esql.executeQueryAndReturnResult(query1);
+      List<List<String>> result_timestamp = esql.executeQueryAndReturnResult(timestampQuery);
+
+      int msgID = Integer.parseInt(result_msgID.get(0).get(0)) + 1;
+      String timestamp = result_timestamp.get(0).get(0);
+
+      System.out.print("\tEnter a message: ");
+      String message = in.readLine();
+      String query2 = String.format("INSERT INTO message (msg_id, msg_text, msg_timestamp, sender_login, chat_id) VALUES (%d, '%s', '%s', '%s', %d)",
+                                     msgID, message, timestamp, authorisedUser, chatID);
+
+      System.out.println(query2);
+      esql.executeUpdate(query2); 
+      
+      System.out.println("\n\tMessage was sent!");
+    }
+
+    catch (Exception e)
+    {
+      System.err.println (e.getMessage ());
+    }
+
+    DisplayEndTitle(menuTitle);
   }
 
   //DELETE MESSAGE MADE BY KOALA (deletes a given message)
