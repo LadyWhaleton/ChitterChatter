@@ -754,19 +754,6 @@ public class Messenger {
     }
   }
 
- 
-  //CREATE CHAT MADE BY KOALA
-  public static void CreateChat(Messenger esql, String authorisedUser){
-    try
-    {
-      System.out.println("Here lies the Create Chat function");
-    }
-    catch(Exception e)
-    {
-      System.err.println(e.getMessage());
-    }
-  }
-
   //ENTER CHAT MADE BY KOALA
   public static void EnterChat(Messenger esql, String authorisedUser){
     try
@@ -780,6 +767,7 @@ public class Messenger {
 
       while(invalidChatID)
       {
+
         System.out.print("\tPlease pick a chat ID: ");
         chatIDChoice = in.readLine();
 
@@ -799,10 +787,20 @@ public class Messenger {
       int showNumMessages = 10;
 
       boolean inChat = true;
+      boolean messagesLoaded = false;
+      String retMsg = "";
 
       while(inChat)
       {
         ShowChatMessages(esql, authorisedUser, chatID, chatIDChoice, showNumMessages);
+
+        if (messagesLoaded)
+        {
+          System.out.println ("\tPast messages have been loaded.");
+          messagesLoaded = false;
+        }
+
+        System.out.println(retMsg);
 
         System.out.println("");
         System.out.println("\tChat #" + chatIDChoice + " Options");
@@ -816,10 +814,10 @@ public class Messenger {
 
         switch(readChoice())
         {
-          case 1: WriteNewMessage(esql, authorisedUser, chatID); break;
-          case 2: DeleteMessage(esql, authorisedUser, chatID); break;
-          case 3: EditMessage(esql, authorisedUser, chatID); break;
-          case 4: showNumMessages = LoadMessages(showNumMessages); break;
+          case 1: retMsg = WriteNewMessage(esql, authorisedUser, chatID); break;
+          case 2: retMsg = DeleteMessage(esql, authorisedUser, chatID); break;
+          case 3: retMsg = EditMessage(esql, authorisedUser, chatID); break;
+          case 4: showNumMessages = LoadMessages(showNumMessages); messagesLoaded = true; break;
           case 9: inChat = false; break;
                                   
           default : System.out.println("Unrecognized choice!"); break;
@@ -834,6 +832,19 @@ public class Messenger {
       System.err.println(e.getMessage());
     }
   } // end EnterChat
+
+
+  //CREATE CHAT MADE BY KOALA
+  public static void CreateChat(Messenger esql, String authorisedUser){
+    try
+    {
+      System.out.println("Here lies the Create Chat function");
+    }
+    catch(Exception e)
+    {
+      System.err.println(e.getMessage());
+    }
+  }
 
   /* Call this function to format the messages.
    * [MSG_ID]                                          
@@ -999,9 +1010,10 @@ public class Messenger {
   }
 
   //WRITE NEW MESSAGE MADE BY KOALA (writes a new message)
-  public static void WriteNewMessage(Messenger esql, String authorisedUser, int chatID){
+  public static String WriteNewMessage(Messenger esql, String authorisedUser, int chatID){
     String menuTitle = "Write a New Message";
     DisplayMenuTitle(menuTitle);
+    String ret = "";
 
     try
     {
@@ -1020,28 +1032,107 @@ public class Messenger {
       String query2 = String.format("INSERT INTO message (msg_id, msg_text, msg_timestamp, sender_login, chat_id) VALUES (%d, '%s', '%s', '%s', %d)",
                                      msgID, message, timestamp, authorisedUser, chatID);
 
-      System.out.println(query2);
+
       esql.executeUpdate(query2); 
       
-      System.out.println("\n\tMessage was sent!");
+      ret = "\n\tMessage was sent!";
     }
 
     catch (Exception e)
     {
-      System.err.println (e.getMessage ());
+      ret = e.getMessage ();
     }
 
     DisplayEndTitle(menuTitle);
+    return ret;
   }
 
   //DELETE MESSAGE MADE BY KOALA (deletes a given message)
-  public static void DeleteMessage(Messenger esql, String authorisedUser, int chatID){
+  public static String DeleteMessage(Messenger esql, String authorisedUser, int chatID){
+    String menuTitle = "Delete a Message";
+    DisplayMenuTitle(menuTitle);
+    String ret = "";
 
+    try
+    {
+
+      // First, user must type in a msg_id
+      System.out.print("\tSelect a message to delete: ");
+      String msgID = in.readLine();
+
+      // first check that the user chose a correct message.
+      String verifyMSGIDquery = String.format ("SELECT msg_text FROM MESSAGE WHERE msg_id = %s AND chat_id = %d AND sender_login = '%s'", msgID, chatID, authorisedUser);
+      List<List<String>> result = esql.executeQueryAndReturnResult(verifyMSGIDquery);
+
+      if (result.size() == 0)
+        ret = "\tError: You have either entered an invalid message # or tried to delete another user's message.";
+      else
+      {
+        String oldMessage = result.get(0).get(0);
+        System.out.println("\tMessage: " + oldMessage);
+        System.out.print("\tAre you sure you want to delete this message? (y/n): ");
+        String answer = in.readLine();
+
+        if (answer.equals("y") || answer.equals ("Y") || answer.equals("yes") || answer.equals("Yes") )
+        {
+          String editMessageQuery = String.format("DELETE FROM MESSAGE WHERE msg_id = %s", msgID);
+          esql.executeUpdate(editMessageQuery);
+          ret = "\tMessage #" + msgID + " deleted.";
+        }
+
+        else
+          ret = "\tMessage has not been deleted.";
+      }
+    }
+
+    catch (Exception e) 
+    {
+      ret = e.getMessage ();
+    }
+
+    DisplayEndTitle(menuTitle);
+    return ret;
   }
 
   //EDIT MESSAGE MADE BY KOALA (edits a given message)
-  public static void EditMessage(Messenger esql, String authorisedUser, int chatID){
+  public static String EditMessage(Messenger esql, String authorisedUser, int chatID){
+    String menuTitle = "Edit a Message";
+    DisplayMenuTitle(menuTitle);
+    String ret = "";
 
+    try
+    {
+      // First, user must type in a msg_id
+      System.out.print("\tSelect a message to edit: ");
+      String msgID = in.readLine();
+
+      // first check that the user chose a correct message.
+      String verifyMSGIDquery = String.format ("SELECT msg_text FROM MESSAGE WHERE msg_id = %s AND chat_id = %d AND sender_login = '%s'", msgID, chatID, authorisedUser);
+      List<List<String>> result = esql.executeQueryAndReturnResult(verifyMSGIDquery);
+
+      if (result.size() == 0)
+        ret = "\tError: You have either entered an invalid message # or tried to edit another user's message.";
+      else
+      {
+        String oldMessage = result.get(0).get(0);
+        System.out.println("\tOld message: " + oldMessage);
+        System.out.print("\tEnter a new message: ");
+        String newMessage = in.readLine();
+
+        String editMessageQuery = String.format("UPDATE MESSAGE SET msg_text = '%s' WHERE msg_id = %s", newMessage, msgID);
+        esql.executeUpdate(editMessageQuery);
+
+        ret = "\tMessage #" + msgID + " has been editted.";
+      }
+    }
+
+    catch (Exception e) 
+    {
+      ret = e.getMessage ();
+    }
+
+    DisplayEndTitle(menuTitle);
+    return ret;
   }
 
   //LOAD MESSAGES MADE BY KOALA (increments external variable by 10 so outside function will print more messages)

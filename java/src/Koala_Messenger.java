@@ -721,3 +721,31 @@ public class Messenger {
 //
 //In which you can use this in a executeQueryAndReturnResult function call and use the result to get the next ID for a new chat
 //Just an example :D
+
+//TIPS PART 2!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+//THIS IS THE ALGORITHM FOR DELETE USER FUNCTION
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//Have a flag that contains external boolean value of usermenu
+        //Have a flag that checks if any of the two conditions below have failed
+
+        //1. Check if user is an owner of any chat (check init_sender in chat)
+                //Set flag to true if yes
+
+        //2. Check if user has written any messages (check sender_login in message)
+                //Set flag to true if yes
+
+        //Check flag
+                //If true, then return out of function
+
+                //If false, delete in the following order:
+
+                        //Make sure you get block list and contact list IDs
+
+                        //1. chat_list (delete the user from chat rooms)
+                        //2. user_list_contains (delete the user from any contact/block lists using list_member)
+                        //3. user_list_contains (delete the user's contact/block list using list_id)
+                        //4. user_list (delete the user's contact/block list IDs using list_id)
+                        //5. usr (delete the user using login)
+
+                //Set usermenu variable to false and return it
