@@ -1071,7 +1071,10 @@ public class Messenger {
         System.out.println("\t4. Load Messages");
 
         if (isGroupOwner) 
-          System.out.println("\t5. Remove a User From Chat");
+        {
+          System.out.println("\t5. Add a User to Chat");
+          System.out.println("\t6. Remove a User From Chat");
+        }
 
         System.out.println("\t=======================");
         System.out.println("\t9. Exit Chat");
@@ -1084,7 +1087,8 @@ public class Messenger {
             case 2: retMsg = DeleteMessage(esql, authorisedUser, chatID); break;
             case 3: retMsg = EditMessage(esql, authorisedUser, chatID); break;
             case 4: showNumMessages = LoadMessages(showNumMessages); messagesLoaded = true; break;
-            case 5: retMsg = RemoveUserFromChat(esql, authorisedUser, chatID); break;
+            case 5: retMsg = AddUserToChat(esql, authorisedUser, chatID); break;
+            case 6: retMsg = RemoveUserFromChat(esql, authorisedUser, chatID); break;
             case 9: inChat = false; break;
                                     
             default : System.out.println("\tInvalid choice!"); break;
@@ -1163,6 +1167,7 @@ public class Messenger {
         if (result1 == 0)
           System.out.println("\t" + newUser + " is an invalid user!\n");
 
+        // add the user to chat
         else
         {
           String query2 = String.format("INSERT INTO chat_list (chat_id, member) VALUES (%d, '%s')", newChatID, newUser);
@@ -1632,6 +1637,105 @@ public class Messenger {
     }
   }
 
+  public static String AddUserToChat(Messenger esql, String authorisedUser, int chatID)
+  {
+    String title = "Add a User to Chat";
+    DisplayMenuTitle(title);
+    String ret = "";
+
+    try
+    {
+      // display friends who aren't in the chat yet
+      String chatMembers = String.format("SELECT member FROM CHAT_LIST WHERE chat_id = %d", chatID);
+      String contacts = String.format("SELECT ULC.list_member FROM USER_LIST_CONTAINS ULC, USR U WHERE U.contact_list = ULC.list_id AND U.login = '%s'", authorisedUser);
+      String query = contacts + " AND ULC.list_member NOT IN (" + chatMembers + ")";
+
+      List<List<String>> users = esql.executeQueryAndReturnResult(query);
+
+      if (users.size() == 0)
+      {
+        DisplayEndTitle(title);
+        return "\tAll of your friends are already in the chat!";
+      }
+
+      for (List<String> u : users)
+        System.out.println("\t" + u.get(0).trim());
+
+      boolean isValidUser = false;
+      String userToAdd = "";
+
+      // check if user entered a valid input
+      while (!isValidUser)
+      {
+        System.out.print("\n\tWho do you want to add? (Type 'q' to cancel): ");
+        userToAdd = in.readLine();
+
+        if (userToAdd.equals("q") || userToAdd.equals("Q"))
+          return "\tNo users were added to the chat.";
+
+        for (List<String> u : users)
+        {
+          if (userToAdd.equals(u.get(0).trim()))
+          {
+            isValidUser = true;
+            break;
+          }
+        }
+
+        if (!isValidUser)
+          System.out.println("\tUser " + userToAdd + "is either already in the chat or an invalid user.");
+      } // end of while for isValidUser
+
+      List<List<String>> numMembers = esql.executeQueryAndReturnResult(chatMembers);
+
+      // after adding this member, check if this action will make the group more than 2 people. if so, change from private to group.
+      if ( (numMembers.size() <= 2)  )
+      {
+          System.out.print("\tAre you sure you want to add this user? New users will see your private messages. (y/n): ");
+          String answer = in.readLine();
+
+          if (answer.equals("y") || answer.equals("Y") || answer.equals("yes") || answer.equals ("YES"))
+          {
+            // add the user 
+            String addMemberQuery = String.format("INSERT INTO chat_list (chat_id, member) VALUES (%d, '%s')", chatID, userToAdd);
+            esql.executeUpdate(addMemberQuery);
+
+             ret = "\t" + userToAdd + " has been added to the chat.";
+
+             // if adding a user to a chat consisting of one other person, change chat_type from private->group
+             if (numMembers.size() == 2)
+             {
+                String privateToGroupQuery = String.format("UPDATE CHAT SET chat_type = 'group' WHERE chat_id = %d", chatID);
+                esql.executeUpdate(privateToGroupQuery);
+                ret += "\n\t" + "Chat #" + chatID + " is now a group chat.";
+             }
+          } // end of checking for yes
+
+          else
+            return "\t" + userToAdd + " was not added to the chat.";
+
+      } // end of if that checks if user really wants to add another user
+
+      else
+      {
+        // add the user 
+        String addMemberQuery = String.format("INSERT INTO chat_list (chat_id, member) VALUES (%d, '%s')", chatID, userToAdd);
+        esql.executeUpdate(addMemberQuery);
+        ret = "\t" + userToAdd + " has been added to the chat.";
+      }
+
+    } // end of try
+
+    catch (Exception e)
+    {
+      System.out.print("\t");
+      System.err.println (e.getMessage ());
+    }
+
+    DisplayEndTitle(title);
+    return ret;
+  }
+
   public static String RemoveUserFromChat(Messenger esql, String authorisedUser, int chatID)
   {
     String title = "Remove a User From Chat";
@@ -1702,7 +1806,7 @@ public class Messenger {
           {
             String groupToPrivateQuery = String.format("UPDATE CHAT SET chat_type = 'private' WHERE chat_id = %d", chatID);
             esql.executeUpdate(groupToPrivateQuery);
-            ret += "\n\t" + "Chat # " + chatID + " is now a private chat.";
+            ret += "\n\t" + "Chat #" + chatID + " is now a private chat.";
           }
 
         } // end of else
