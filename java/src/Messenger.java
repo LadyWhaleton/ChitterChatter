@@ -286,7 +286,8 @@ public class Messenger {
               boolean usermenu = true;
               while(usermenu) {
                 printLogo();
-                System.out.println("\n\n\t===================================");
+                System.out.println("\n\n\tYou are logged in as " + authorisedUser + ".");
+                System.out.println("\t===================================");
                 System.out.println("\t\tMAIN MENU");
                 System.out.println("\t===================================");
                 System.out.println("\t1. Show Chat Interface");
@@ -964,8 +965,11 @@ public class Messenger {
       String retMsg = "";
 
       // check if user is group owner of the chats
-      String groupOwnerQuery = String.format("SELECT * from CHAT WHERE chat_id = %s AND init_sender = '%s'", chatIDChoice, authorisedUser);
+      String groupOwnerQuery = String.format("SELECT init_sender from CHAT WHERE chat_id = %s AND init_sender = '%s'", chatIDChoice, authorisedUser);
       int groupOwnerVal = esql.executeQuery(groupOwnerQuery);
+
+      String getOwnerQuery = String.format("SELECT init_sender from CHAT WHERE chat_id = %s", chatIDChoice);
+      List<List<String>> groupOwnerResult = esql.executeQueryAndReturnResult(getOwnerQuery);
 
       if (groupOwnerVal != 0)
         isGroupOwner = true;
@@ -984,6 +988,7 @@ public class Messenger {
 
         System.out.println("");
         System.out.println("\tChat #" + chatIDChoice + " Options");
+        System.out.println("\tGroup Owner: " + groupOwnerResult.get(0).get(0));
         System.out.println("\t=======================");
         System.out.println("\t1. Write a New Message");
         System.out.println("\t2. Delete a Message");
@@ -1031,6 +1036,7 @@ public class Messenger {
 
     catch(Exception e)
     {
+      System.out.print("\tError: ");
       System.err.println(e.getMessage());
     }
   } // end EnterChat
