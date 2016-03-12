@@ -289,20 +289,23 @@ public class Messenger {
                 System.out.println("\n\n\t===================================");
                 System.out.println("\t\tMAIN MENU");
                 System.out.println("\t===================================");
-                System.out.println("\t1. Show Contacts");
-                System.out.println("\t2. Show Blocked List");
-                System.out.println("\t3. Show Chat Interface");
+                System.out.println("\t1. Show Chat Interface");
+                System.out.println("\t2. Show Contacts");
+                System.out.println("\t3. Show Blocked List");
                 System.out.println("\t4. Add a New Contact");
-                System.out.println("\t5. Block a User");
-                System.out.println("\t")
+                System.out.println("\t5. Remove a Contact");
+                System.out.println("\t6. Block a User");
+                System.out.println("\t7. Unblock a User");
                 System.out.println("\t===================================");
                 System.out.println("\t9. Log out");
                 switch (readChoice()){
-                   case 1: ListContacts(esql,authorisedUser); break;
-                   case 2: ListBlocks(esql, authorisedUser); break;
-                   case 3: ShowChatInterface(esql, authorisedUser); break;
+                   case 1: ShowChatInterface(esql, authorisedUser); break;
+                   case 2: ListContacts(esql,authorisedUser); break;
+                   case 3: ListBlocks(esql, authorisedUser); break;
                    case 4: AddToContact(esql,authorisedUser); break;
-                   case 5: AddToBlock(esql, authorisedUser); break;
+                   case 5: RemoveContact(esql,authorisedUser); break;
+                   case 6: AddToBlock(esql, authorisedUser); break;
+                   case 7: UnblockUser(esql, authorisedUser); break;
                    case 9: usermenu = false; break;
                    default : System.out.println("Invalid selection!"); break;
                 }
@@ -457,6 +460,11 @@ public class Messenger {
 
       DisplayEndTitle(menuTitle);
    }
+
+   public static void DeleteAccount(Messenger esql, String authorisedUser)
+   {
+
+   }
    
    /*
     * Check log in credentials for an existing user
@@ -551,8 +559,8 @@ public class Messenger {
 
   }//end
 
-   public static void AddToBlock(Messenger esql,String authorisedUser){
-      String menuTitle = "Block a Contact";
+   public static void AddToBlock(Messenger esql, String authorisedUser){
+      String menuTitle = "Block a User";
       DisplayMenuTitle(menuTitle);
       String blocker = "INVALID";
 
@@ -630,6 +638,124 @@ public class Messenger {
       }
    }
 
+   public static void DisplayBlocked(Messenger esql, String authorisedUser, boolean flag)
+   {
+      try
+      {
+        String query = 
+        "SELECT ULC.list_member " +
+        "FROM USER_LIST_CONTAINS ULC, USR U " + 
+        "WHERE U.block_list = ULC.list_id AND U.login = '" + authorisedUser + "';";
+
+        //Returns # of fitting results
+        //HAVE TO USE executeQueryAndReturnResult, no not use executeQuery
+        List<List<String>> result = esql.executeQueryAndReturnResult(query);
+        if(result.size() == 0)
+          System.out.println("\tYou haven't blocked anyone yet.");
+        else
+        {
+          if (flag)
+            System.out.println("\tYou blocked " + result.size() + " users.\n");
+
+          String output = "";
+          int count = 0;
+          for(List<String> list : result)
+          {
+            ++count;
+            for(String word : list)
+              output+="\t" + word.trim() + "\n";
+          }
+
+          System.out.println(output);
+        }
+      } // end of try
+
+      catch(Exception e)
+      {
+         System.err.println (e.getMessage ());
+      }
+   }
+
+  public static void VerifyContactBlock(Messenger esql, String authorisedUser, String listType)
+  {
+
+    boolean isValidUser = false;
+    String userToRemove = "";
+
+    try 
+    {
+      String userQuery = "";
+
+      // obtain the users in the list.
+      if (listType.equals("block"))
+        userQuery = String.format("SELECT ULC.list_member FROM USER_LIST_CONTAINS ULC, USR U WHERE U.block_list = ULC.list_id AND U.login = '%s'", authorisedUser);
+      else
+        userQuery = String.format("SELECT ULC.list_member FROM USER_LIST_CONTAINS ULC, USR U WHERE U.contact_list = ULC.list_id AND U.login = '%s'", authorisedUser);
+
+      List<List<String>> result = esql.executeQueryAndReturnResult(userQuery);
+
+      if(result.size() == 0)
+        return;
+
+      // check if the input is a valid user in the list
+      while (!isValidUser)
+      {
+        System.out.print("\tWho do you want to remove? (Type 'q' to go back): ");
+        userToRemove = in.readLine();
+
+        if (userToRemove.equals("q") || userToRemove.equals ("Q"))
+        {
+          System.out.println("\n\t No users were removed.");
+          return;
+        }
+
+        // check if user entered a valid member
+        for (List<String> login : result)
+        {
+          if ( (login.get(0).trim()).equals(userToRemove))
+          {
+            isValidUser = true;
+            break;
+          }
+        }
+
+        if (!isValidUser)
+          System.out.println("\t" + "User " + userToRemove + " doesn't belong to this list!");
+
+      } // end of while loop isValidUser
+
+      // valid user, so remove them from the list
+      if (listType.equals("block"))
+      {
+          String removeFrom = String.format(
+          "DELETE FROM USER_LIST_CONTAINS "+
+          "WHERE (select block_list from USR where login='%s')=list_id "+
+          "AND list_member = '%s'",authorisedUser, userToRemove);
+          esql.executeUpdate(removeFrom);
+
+          System.out.println("\n\t" + userToRemove + " is no longer blocked.");
+      }
+
+      else
+      {
+        String removeFrom = String.format(
+        "DELETE FROM USER_LIST_CONTAINS "+
+        "WHERE (select contact_list from USR where login='%s')=list_id "+
+        "AND list_member = '%s'", authorisedUser, userToRemove);
+        esql.executeUpdate(removeFrom);
+
+        System.out.println("\n\t" + userToRemove + " has been removed from contacts.");
+      }
+
+
+    } // end of try
+
+    catch (Exception e)
+    {
+      System.err.println (e.getMessage ());
+    }
+  }
+
    //Try to get this to alphabetical order. Use Indexes.
    public static void ListContacts(Messenger esql,String authorisedUser){
         String menuTitle = "Your Contacts";
@@ -641,43 +767,27 @@ public class Messenger {
   public static void ListBlocks(Messenger esql,String authorisedUser){
       String menuTitle = "Blocked Users";
       DisplayMenuTitle(menuTitle);
-
-      try
-      {
-        String query = 
-        "SELECT ULC.list_member " +
-        "FROM USER_LIST_CONTAINS ULC, USR U " + 
-        "WHERE U.block_list = ULC.list_id AND U.login = '" + authorisedUser + "';";
-
-        //Returns # of fitting results
-        //HAVE TO USE executeQueryAndReturnResult, no not use executeQuery
-        List<List<String>> result = esql.executeQueryAndReturnResult(query);
-        if(result.size() == 0){
-      System.out.println("\tYou haven't blocked anyone yet.");
-        }else{
-
-          System.out.println("\tYou blocked " + result.size() + " users.\n");
-
-          String output = "";
-          int count = 0;
-          for(List<String> list : result)
-          {
-            ++count;
-        for(String word : list)
-        output+="\t" + word.trim() + "\n";
-      }
-          System.out.println(output);
-      }
-      }
-
-      catch(Exception e)
-      {
-         System.err.println (e.getMessage ());
-      }
-
-      DisplayEndTitle(menuTitle);   
-      
+      DisplayBlocked(esql, authorisedUser, true);
+      DisplayEndTitle(menuTitle);    
     }
+
+  public static void RemoveContact(Messenger esql, String authorisedUser)
+  {
+    String title = "Remove a Contact";
+    DisplayMenuTitle(title);
+    DisplayContacts(esql, authorisedUser, false);
+    VerifyContactBlock(esql, authorisedUser, "contact");
+    DisplayEndTitle(title);
+  }
+
+  public static void UnblockUser (Messenger esql, String authorisedUser)
+  {
+    String title = "Unblock a User";
+    DisplayMenuTitle(title);
+    DisplayBlocked(esql, authorisedUser, false);
+    VerifyContactBlock(esql, authorisedUser, "block");
+    DisplayEndTitle(title);
+  }
 
   // Steph's Note: This function attempts to place the table divider, "|", at the right location
   public static String FormatChatTableRow(String menuOption, String listItem, int column)
@@ -827,7 +937,7 @@ public class Messenger {
       while(invalidChatID)
       {
 
-        System.out.print("\tSelect a chat ID (Or type 'q' to go back): ");
+        System.out.print("\tSelect a chat ID (Type 'q' to go back): ");
         chatIDChoice = in.readLine();
 
         if (chatIDChoice.equals("q") || chatIDChoice.equals("Q") || chatIDChoice.equals("quit") || chatIDChoice.equals("QUIT"))
@@ -1055,11 +1165,12 @@ public class Messenger {
       } // end of else
 
       // then, ask them to pick a chat. then check if the chat exists with the current user and chat id from input
-      System.out.print("\tSelect a chat to delete (Or type 'q' to go back): ");
+      System.out.print("\tSelect a chat to delete (Type 'q' to go back): ");
       String chatID = in.readLine();
 
-      if (chatID.equals('q') || chatID.equals('Q'))
+      if (chatID.equals("q") || chatID.equals("Q"))
       {
+        System.out.println("\tNo chats deleted.");
         DisplayEndTitle(title);
         return;
       }
@@ -1314,7 +1425,7 @@ public class Messenger {
       if (msgID.equals("q") || msgID.equals("Q"))
       {
         DisplayEndTitle(menuTitle);
-        return ret;
+        return "\tNo messages were removed!";
       }
 
       // first check that the user chose a correct message.
@@ -1360,13 +1471,13 @@ public class Messenger {
     try
     {
       // First, user must type in a msg_id
-      System.out.print("\tSelect a message to edit (Or type 'q' to go back): ");
+      System.out.print("\tSelect a message to edit (Type 'q' to go back): ");
       String msgID = in.readLine();
 
       if (msgID.equals("q") || msgID.equals("Q"))
       {
         DisplayEndTitle(menuTitle);
-        return ret;
+        return "\tNo messages were editted.";
       }
 
       // first check that the user chose a correct message.
@@ -1455,7 +1566,7 @@ public class Messenger {
         //HAVE TO USE executeQueryAndReturnResult, no not use executeQuery
         List<List<String>> chatMemberList = esql.executeQueryAndReturnResult(chatMemberQuery);
         if(chatMemberList.size() == 0)
-          ret = "\tYou are the only user in this chat. :(";
+          ret = "\tYou can't remove yourself from the chat! :(";
         else
         {
           System.out.println("\tThere are " + chatMemberList.size() + " other user(s) in this chat.\n");
@@ -1477,7 +1588,7 @@ public class Messenger {
 
           while (!isValidMember)
           {
-            System.out.print("\n\t" + "Who do you want to remove? (Type in 'q' to go back): ");
+            System.out.print("\n\t" + "Who do you want to remove? (Type 'q' to go back): ");
             userToRemove = in.readLine();
 
             if (userToRemove.equals("q") || userToRemove.equals ("Q"))
