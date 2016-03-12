@@ -297,6 +297,8 @@ public class Messenger {
                 System.out.println("\t5. Remove a Contact");
                 System.out.println("\t6. Block a User");
                 System.out.println("\t7. Unblock a User");
+                System.out.println("\t-----------------------------------");
+                System.out.println("\t8. Delete Account");
                 System.out.println("\t===================================");
                 System.out.println("\t9. Log out");
                 switch (readChoice()){
@@ -307,6 +309,7 @@ public class Messenger {
                    case 5: RemoveContact(esql,authorisedUser); break;
                    case 6: AddToBlock(esql, authorisedUser); break;
                    case 7: UnblockUser(esql, authorisedUser); break;
+                   case 8: usermenu = DeleteAccount(esql, authorisedUser); break;
                    case 9: usermenu = false; break;
                    default : System.out.println("Invalid selection!"); break;
                 }
@@ -462,10 +465,82 @@ public class Messenger {
       DisplayEndTitle(menuTitle);
    }
 
-   public static void DeleteAccount(Messenger esql, String authorisedUser)
-   {
+  public static void DeletePublications(Messenger esql, String authorisedUser)
+  {
+    // delete your chat groups. for each chat group you own, delete chat.
+  }
 
-   }
+  public static boolean DeleteAccountHelper(Messenger esql, String authorisedUser)
+  {
+    try
+    {
+      // check if user is owner of any chats
+      String query1 = String.format("SELECT * FROM CHAT WHERE init_sender = '%s'", authorisedUser);
+      int result1 = esql.executeQuery(query1);
+
+      if (result1 > 0)
+      {
+        System.out.println("\tYou cannot delete your account because you are a group owner of one or more chats!");
+        return true;
+      }
+
+      // check user sent any messages
+      String query2 = String.format("SELECT * FROM MESSAGE WHERE sender_login = '%s'", authorisedUser);
+      int result2 = esql.executeQuery(query2);
+
+      if (result2 > 0)
+      {
+        System.out.println("\tYou cannot delete your account because you posted a message!");
+        return true;
+      }
+
+      // if you're here, that means the previous two conditions weren't true
+
+      String query3 = String.format("DELETE FROM CHAT_LIST WHERE member = '%s'", authorisedUser);
+      esql.executeUpdate(query3);
+
+      System.out.println("\tYou were removed from chats.");
+
+      // delete yourself from the userlist
+      String query4 = String.format("DELETE FROM USR WHERE login = '%s'", authorisedUser);
+      esql.executeUpdate(query4);
+
+      System.out.println("\tYour existence was erased.");
+
+      return false;
+    }
+
+    catch (Exception e)
+    {
+      System.out.println ("\n\tError:" + e.getMessage ());
+    }
+
+    return true;
+  } 
+
+  public static boolean DeleteAccount(Messenger esql, String authorisedUser)
+  {
+    String title = "Delete Account";
+    DisplayMenuTitle(title);
+    boolean ret = true;
+
+    try
+    {
+      System.out.print("\tAre you sure you want to delete your account, " + authorisedUser + "? (y/n): ");
+      String answer = in.readLine();
+
+      if (answer.equals("y") || answer.equals("Y") || answer.equals ("yes") || answer.equals ("YES"))
+        ret = DeleteAccountHelper(esql, authorisedUser);
+    }
+
+    catch (Exception e)
+    {
+      System.out.println ("\n\tError:" + e.getMessage ());
+    }
+
+    DisplayEndTitle(title);
+    return ret;
+  }
    
    /*
     * Check log in credentials for an existing user
