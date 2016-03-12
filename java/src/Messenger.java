@@ -50,7 +50,7 @@ public class Messenger {
     */
    public Messenger (String dbname, String dbport, String user, String passwd) throws SQLException {
 
-      System.out.print("Connecting to database...");
+      //System.out.print("\tConnecting to database...");
       try{
          // constructs the connection URL
          String url = "jdbc:postgresql://localhost:" + dbport + "/" + dbname;
@@ -58,10 +58,10 @@ public class Messenger {
 
          // obtain a physical connection
          this._connection = DriverManager.getConnection(url, user, passwd);
-         System.out.println("Done\n\n");
+         System.out.println("\t\t\tDone\n\n");
       }catch (Exception e){
-         System.err.println("Error - Unable to Connect to Database: " + e.getMessage() );
-         System.out.println("Make sure you started postgres on this machine");
+         System.err.println("\t\tError - Unable to Connect to Database: " + e.getMessage() );
+         System.out.println("\t\tMake sure you started postgres on this machine");
          System.exit(-1);
       }//end catch
    }//end Messenger
@@ -294,6 +294,7 @@ public class Messenger {
                 System.out.println("\t3. Show Chat Interface");
                 System.out.println("\t4. Add a New Contact");
                 System.out.println("\t5. Block a User");
+                System.out.println("\t")
                 System.out.println("\t===================================");
                 System.out.println("\t9. Log out");
                 switch (readChoice()){
@@ -320,9 +321,9 @@ public class Messenger {
          // make sure to cleanup the created table and close the connection.
          try{
             if(esql != null) {
-               System.out.print("Disconnecting from database...");
+               System.out.print("\n\tDisconnecting from database...");
                esql.cleanup ();
-               System.out.println("Done.\n\nBye !");
+               System.out.println("\tDone.\n\n\tBye !");
             }//end if
          }catch (Exception e) {
             // ignored.
@@ -332,9 +333,9 @@ public class Messenger {
   
    public static void Greeting(){
       System.out.println(
-         "\n\n*******************************************************\n" +
-         "              User Interface                       \n" +
-         "*******************************************************\n");
+         "\n\n\t********************************************\n" +
+         "\t\t  Connecting to Database...\n" +
+         "\t********************************************\n");
    }//end Greeting
 
    /*
@@ -385,10 +386,19 @@ public class Messenger {
   {
     if (login.equals(""))
       return "\n\tError: Login cannot be empty!";
+
+    else if (login.equals("q"))
+      return "\n\tError: 'q' cannot be used as a login!";
+
+    else if (login.equals('Q'))
+      return "\n\tError: 'Q' cannot be used as a login!";
+
     else if (login.equals("done"))
       return "\n\tError: 'done' cannot be used as a login!";
+
     else if (Character.isDigit(login.charAt(0)))
       return "\n\tError: Login cannot start with a digit!";
+
     else 
       return "ok";
   }
@@ -483,7 +493,7 @@ public class Messenger {
           DisplayEndTitle(menuTitle);
           return login;
       }else{
-        System.out.print("Username or Password Incorrect");
+        System.out.print("\n\tIncorrect username or password!");
         DisplayEndTitle(menuTitle);
           return null;
         }
@@ -574,7 +584,7 @@ public class Messenger {
 
       }catch(Exception e){
         if(e.getMessage().contains("ERROR:  duplicate key violates")){
-        System.out.println(blocker + " is already blocked!");
+        System.out.println("\n\t" + blocker + " is already blocked!");
           }else{
         System.err.println (e.getMessage ());
       }
@@ -817,8 +827,11 @@ public class Messenger {
       while(invalidChatID)
       {
 
-        System.out.print("\tPlease pick a chat ID: ");
+        System.out.print("\tSelect a chat ID (Or type 'q' to go back): ");
         chatIDChoice = in.readLine();
+
+        if (chatIDChoice.equals("q") || chatIDChoice.equals("Q") || chatIDChoice.equals("quit") || chatIDChoice.equals("QUIT"))
+          return;
 
         String checkChatIDExistsQuery = "SELECT chat_id FROM chat_list WHERE member = '" + authorisedUser + "' AND chat_id = '" + chatIDChoice + "'";
         int chatCount = esql.executeQuery(checkChatIDExistsQuery);
@@ -831,13 +844,21 @@ public class Messenger {
         else
           System.out.println("\tInvalid ID, please pick another!\n");
 
-        }
+      }
 
       int showNumMessages = 10;
 
       boolean inChat = true;
+      boolean isGroupOwner = false;
       boolean messagesLoaded = false;
       String retMsg = "";
+
+      // check if user is group owner of the chats
+      String groupOwnerQuery = String.format("SELECT * from CHAT WHERE chat_id = %s AND init_sender = '%s'", chatIDChoice, authorisedUser);
+      int groupOwnerVal = esql.executeQuery(groupOwnerQuery);
+
+      if (groupOwnerVal != 0)
+        isGroupOwner = true;
 
       while(inChat)
       {
@@ -858,19 +879,41 @@ public class Messenger {
         System.out.println("\t2. Delete a Message");
         System.out.println("\t3. Edit a Message");
         System.out.println("\t4. Load Messages");
+
+        if (isGroupOwner) 
+          System.out.println("\t5. Remove a User From Chat");
+
         System.out.println("\t=======================");
         System.out.println("\t9. Exit Chat");
 
-        switch(readChoice())
+        if (isGroupOwner)
         {
-          case 1: retMsg = WriteNewMessage(esql, authorisedUser, chatID); break;
-          case 2: retMsg = DeleteMessage(esql, authorisedUser, chatID); break;
-          case 3: retMsg = EditMessage(esql, authorisedUser, chatID); break;
-          case 4: showNumMessages = LoadMessages(showNumMessages); messagesLoaded = true; break;
-          case 9: inChat = false; break;
-                                  
-          default : System.out.println("\tInvalid choice!"); break;
-        } // end Switch
+          switch(readChoice())
+          {
+            case 1: retMsg = WriteNewMessage(esql, authorisedUser, chatID); break;
+            case 2: retMsg = DeleteMessage(esql, authorisedUser, chatID); break;
+            case 3: retMsg = EditMessage(esql, authorisedUser, chatID); break;
+            case 4: showNumMessages = LoadMessages(showNumMessages); messagesLoaded = true; break;
+            case 5: retMsg = RemoveUserFromChat(esql, authorisedUser, chatID); break;
+            case 9: inChat = false; break;
+                                    
+            default : System.out.println("\tInvalid choice!"); break;
+          } // end Switch for Group Owner
+        }
+
+        else
+        {
+          switch(readChoice())
+          {
+            case 1: retMsg = WriteNewMessage(esql, authorisedUser, chatID); break;
+            case 2: retMsg = DeleteMessage(esql, authorisedUser, chatID); break;
+            case 3: retMsg = EditMessage(esql, authorisedUser, chatID); break;
+            case 4: showNumMessages = LoadMessages(showNumMessages); messagesLoaded = true; break;
+            case 9: inChat = false; break;
+                                    
+            default : System.out.println("\tInvalid choice!"); break;
+          } // end Switch for non-Group Owner
+        }
 
       } // end while (InChat)
 
@@ -1012,8 +1055,15 @@ public class Messenger {
       } // end of else
 
       // then, ask them to pick a chat. then check if the chat exists with the current user and chat id from input
-      System.out.print("\tSelect a chat to delete: ");
+      System.out.print("\tSelect a chat to delete (Or type 'q' to go back): ");
       String chatID = in.readLine();
+
+      if (chatID.equals('q') || chatID.equals('Q'))
+      {
+        DisplayEndTitle(title);
+        return;
+      }
+
       String query2 = String.format("SELECT * FROM CHAT WHERE chat_id = %s AND init_sender = '%s'", chatID, authorisedUser);
 
       // then execute query, check if that chat exists. if true, delete all messages first where chat_id = input_chatID
@@ -1208,9 +1258,6 @@ public class Messenger {
 
     DisplayEndTitle(menuTitle);
 
-  //executeQueryAndReturnResult
-  //and then format as you like :D
-
   }
 
   //WRITE NEW MESSAGE MADE BY KOALA (writes a new message)
@@ -1261,8 +1308,14 @@ public class Messenger {
     {
 
       // First, user must type in a msg_id
-      System.out.print("\tSelect a message to delete: ");
+      System.out.print("\tSelect a message to delete (Or press 'q' to go back): ");
       String msgID = in.readLine();
+
+      if (msgID.equals("q") || msgID.equals("Q"))
+      {
+        DisplayEndTitle(menuTitle);
+        return ret;
+      }
 
       // first check that the user chose a correct message.
       String verifyMSGIDquery = String.format ("SELECT msg_text FROM MESSAGE WHERE msg_id = %s AND chat_id = %d AND sender_login = '%s'", msgID, chatID, authorisedUser);
@@ -1307,8 +1360,14 @@ public class Messenger {
     try
     {
       // First, user must type in a msg_id
-      System.out.print("\tSelect a message to edit: ");
+      System.out.print("\tSelect a message to edit (Or type 'q' to go back): ");
       String msgID = in.readLine();
+
+      if (msgID.equals("q") || msgID.equals("Q"))
+      {
+        DisplayEndTitle(menuTitle);
+        return ret;
+      }
 
       // first check that the user chose a correct message.
       String verifyMSGIDquery = String.format ("SELECT msg_text FROM MESSAGE WHERE msg_id = %s AND chat_id = %d AND sender_login = '%s'", msgID, chatID, authorisedUser);
@@ -1344,15 +1403,127 @@ public class Messenger {
     return showNumMessages + 10;
   }
 
+  public static void ListChatMembers(Messenger esql, String authorisedUser, int chatID)
+  {
+    try
+    {
+        String query = 
+        "SELECT ULC.list_member " +
+        "FROM USER_LIST_CONTAINS ULC, USR U " + 
+        "WHERE U.contact_list = ULC.list_id AND U.login = '" + authorisedUser + "';";
 
-//EXTRA NOTES:
-//If you want to get the very last entry of a certain table (using a unique field like chat_id in the chat table for example)
-//You can use the following query:
-//
-//SELECT chat_id FROM chat ORDER BY chat_id DESC LIMIT 1;
-//
-//In which you can use this in a executeQueryAndReturnResult function call and use the result to get the next ID for a new chat
-//Just an example :D
+        //Returns # of fitting results
+        //HAVE TO USE executeQueryAndReturnResult, no not use executeQuery
+        List<List<String>> result = esql.executeQueryAndReturnResult(query);
+        if(result.size() == 0)
+          System.out.println("\tYou have no friends. :(");
+        else
+        {
+            System.out.println("\tYou have " + result.size() + " friends.\n");
 
+          String output = "";
+          int count = 0;
+          for(List<String> list : result)
+          {
+            ++count;
+            for(String word : list)
+              // output+="\t"+count +". "+ word.trim() + "\n";
+              output += "\t" + word.trim() + "\n";
+          }
+            System.out.println(output);
+        }
+    }
+
+    catch (Exception e)
+    {
+      System.err.println (e.getMessage ());
+    }
+  }
+
+  public static String RemoveUserFromChat(Messenger esql, String authorisedUser, int chatID)
+  {
+    String title = "Remove a User From Chat";
+    DisplayMenuTitle(title);
+    String ret = "";
+
+    try
+    {
+      // first display users in the chat
+        String chatMemberQuery = String.format("SELECT CL.member FROM CHAT_LIST CL WHERE CL.chat_id = %d AND CL.member != '%s'", chatID, authorisedUser);
+
+        //Returns # of fitting results
+        //HAVE TO USE executeQueryAndReturnResult, no not use executeQuery
+        List<List<String>> chatMemberList = esql.executeQueryAndReturnResult(chatMemberQuery);
+        if(chatMemberList.size() == 0)
+          ret = "\tYou are the only user in this chat. :(";
+        else
+        {
+          System.out.println("\tThere are " + chatMemberList.size() + " other user(s) in this chat.\n");
+
+          String output = "";
+          int count = 0;
+          for(List<String> list : chatMemberList)
+          {
+            ++count;
+            for(String word : list)
+              // output+="\t"+count +". "+ word.trim() + "\n";
+              output += "\t" + word.trim() + "\n";
+          }
+
+          System.out.println(output);
+
+          boolean isValidMember = false;
+          String userToRemove = "";
+
+          while (!isValidMember)
+          {
+            System.out.print("\n\t" + "Who do you want to remove? (Type in 'q' to go back): ");
+            userToRemove = in.readLine();
+
+            if (userToRemove.equals("q") || userToRemove.equals ("Q"))
+            {
+              DisplayEndTitle(title);
+              return "\n\t No users were removed.";
+            }
+
+            // check if user entered a valid member
+            for (List<String> login : chatMemberList)
+            {
+              if ( (login.get(0).trim()).equals(userToRemove))
+              {
+                isValidMember = true;
+                break;
+              }
+            }
+
+            if (!isValidMember)
+              System.out.println("\t" + "User " + userToRemove + " is not a member of this chat!");
+
+          } // end of while loop
+
+          String removeUserQuery = String.format ("DELETE FROM CHAT_LIST WHERE chat_id = %d AND member = '%s'", chatID, userToRemove);
+          esql.executeUpdate(removeUserQuery);
+          ret = "\n\t" + userToRemove + " has been removed from chat #" + chatID + ".";
+
+          // after deleting this member, check if this action will make the group less than 2 people. if so, make the group private.
+          if ( (chatMemberList.size() == 2) && (chatMemberList.size() - 1) < 2)
+          {
+            String groupToPrivateQuery = String.format("UPDATE CHAT SET chat_type = 'private' WHERE chat_id = %d", chatID);
+            esql.executeUpdate(groupToPrivateQuery);
+            ret += "\n\t" + "Chat # " + chatID + " is now a private chat.";
+          }
+
+        } // end of else
+
+    } // end of try
+
+    catch (Exception e)
+    {
+      ret = e.getMessage();
+    }
+
+    DisplayEndTitle(title);
+    return ret;
+  }
 
 }//end Messenger
