@@ -529,7 +529,7 @@ public class Messenger {
       System.out.print("\tAre you sure you want to delete your account, " + authorisedUser + "? (y/n): ");
       String answer = in.readLine();
 
-      if (answer.equals("y") || answer.equals("Y") || answer.equals ("yes") || answer.equals ("YES"))
+      if (answer.equals("y") || answer.equals("Y") || answer.equals ("yes") || answer.equals ("YES")){
         System.out.print("\tPlease enter user password: ");
         String password = in.readLine();
         String query = String.format("SELECT * FROM Usr WHERE login = '%s' AND password = '%s'", authorisedUser, password);
@@ -541,6 +541,7 @@ public class Messenger {
           System.out.println("\tWrong password, account not deleted.");
           ret = false;
         }
+      }
     }
 
     catch (Exception e)
@@ -895,7 +896,6 @@ public class Messenger {
       int numSpaces = columnName.length();
       actualSpaces = numSpaces - listItem.length() - 1;
     }
-
     else if (column == 2)
     {
       String columnName = "  Initial Sender   ";
@@ -916,32 +916,33 @@ public class Messenger {
   }
 
   // Steph's Note: This function is only used when listing all of the chats.
-  public static void DisplayChatTable()
+  public static void DisplayChatTable(boolean flag)
   {
-    System.out.println("\n\t=========================================================================================");
-    System.out.println("\t   Chat ID  |  Chat Type  |   Initial Sender   |  Recent Message  |       Timestamp  ");
-    System.out.println("\t============|=============|====================|==================|======================");
+    if (flag)
+    {
+      System.out.println("\n\t=========================================================================================");
+      System.out.println("\t   Chat ID  |  Chat Type  |   Initial Sender   |  Recent Message  |       Timestamp  ");
+      System.out.println("\t============|=============|====================|==================|======================");
+    }
+
+    else
+    {
+      System.out.println("\n\t==============================================");
+      System.out.println("\t   Chat ID  |  Chat Type  |   Initial Sender");
+      System.out.println("\t============|=============|===================");
+    }
   }
 
   /* Steph's: Note: The only thing I changed for ListChats was how I formatted the display.
    */
-   public static boolean ListChats(Messenger esql, String authorisedUser)
+   public static boolean ListChats(Messenger esql, String authorisedUser, boolean flag)
    {
       String menuTitle = "Your Chats";
       DisplayMenuTitle(menuTitle);
       try{
         // For display chats, check if person is member (currentUser) of chat_id.
         // then display all chats according chat_id
-
         String query = String.format("SELECT C.*, M.msg_text, M.msg_timestamp FROM CHAT C, MESSAGE M WHERE M.msg_timestamp IN (SELECT MAX(M1.msg_timestamp) AS ts FROM MESSAGE M1 WHERE M1.chat_id = C.chat_id) AND  C.chat_id = M.chat_id AND C.chat_id IN  (SELECT CL.chat_id FROM CHAT_LIST CL WHERE CL.member='%s' ) ORDER BY M.msg_timestamp DESC", authorisedUser);
-
-        /*
-        String query = 
-        "SELECT C.chat_id, C.chat_type, C.init_sender " + 
-        "FROM CHAT C, CHAT_LIST CL " +
-        "WHERE C.chat_id = CL.chat_id AND CL.member = '" + authorisedUser + "'";
-        */
-        
 
         System.out.println("\tOne moment... loading chats...");
 
@@ -952,7 +953,7 @@ public class Messenger {
             return false;
           }else{
 
-            DisplayChatTable();
+            DisplayChatTable(flag);
 
             String output = "";
             int count = 0;
@@ -974,21 +975,16 @@ public class Messenger {
                 String listItem = list.get(i).trim();
                 if (listItem.length() > 15 && i == 3)
                   listItem = listItem.substring(0,12) + "...";
-
                 output +=  listItem + FormatChatTableRow (rowString, listItem, i) + " ";
 
               }
             }
-
             output += "\n";
           }
           System.out.print(output);
           output="";
         }
-
-
       }
-
 
       catch(Exception e)
       {
@@ -1000,7 +996,6 @@ public class Messenger {
 
    }
 
-  //CHAT INTERFACE MADE BY KOALA
   public static void ShowChatInterface(Messenger esql, String authorisedUser){
     try{
       boolean chatInterfacing = true;
@@ -1029,12 +1024,11 @@ public class Messenger {
     }
   }
 
-  //ENTER CHAT MADE BY KOALA
   public static void EnterChat(Messenger esql, String authorisedUser){
     try
     {
 
-      if (!ListChats(esql, authorisedUser))
+      if (!ListChats(esql, authorisedUser, true))
         return;
 
       boolean invalidChatID = true;
@@ -1096,15 +1090,16 @@ public class Messenger {
         System.out.println("\tChat #" + chatIDChoice + " Options");
         System.out.println("\tGroup Owner: " + groupOwnerResult.get(0).get(0));
         System.out.println("\t=======================");
-        System.out.println("\t1. Write a New Message");
-        System.out.println("\t2. Delete a Message");
-        System.out.println("\t3. Edit a Message");
-        System.out.println("\t4. Load Messages");
+        System.out.println("\t1. Show Chat Members");
+        System.out.println("\t2. Write a New Message");
+        System.out.println("\t3. Delete a Message");
+        System.out.println("\t4. Edit a Message");
+        System.out.println("\t5. Load Messages");
 
         if (isGroupOwner) 
         {
-          System.out.println("\t5. Add a User to Chat");
-          System.out.println("\t6. Remove a User From Chat");
+          System.out.println("\t6. Add a User to Chat");
+          System.out.println("\t7. Remove a User From Chat");
         }
 
         System.out.println("\t=======================");
@@ -1114,12 +1109,13 @@ public class Messenger {
         {
           switch(readChoice())
           {
-            case 1: retMsg = WriteNewMessage(esql, authorisedUser, chatID); break;
-            case 2: retMsg = DeleteMessage(esql, authorisedUser, chatID); break;
-            case 3: retMsg = EditMessage(esql, authorisedUser, chatID); break;
-            case 4: showNumMessages = LoadMessages(showNumMessages); messagesLoaded = true; break;
-            case 5: retMsg = AddUserToChat(esql, authorisedUser, chatID); break;
-            case 6: retMsg = RemoveUserFromChat(esql, authorisedUser, chatID); break;
+            case 1: ShowChatMembers(esql, authorisedUser, chatID); break;
+            case 2: retMsg = WriteNewMessage(esql, authorisedUser, chatID); break;
+            case 3: retMsg = DeleteMessage(esql, authorisedUser, chatID); break;
+            case 4: retMsg = EditMessage(esql, authorisedUser, chatID); break;
+            case 5: showNumMessages = LoadMessages(showNumMessages); messagesLoaded = true; break;
+            case 6: retMsg = AddUserToChat(esql, authorisedUser, chatID); break;
+            case 7: retMsg = RemoveUserFromChat(esql, authorisedUser, chatID); break;
             case 9: inChat = false; break;
                                     
             default : System.out.println("\tInvalid choice!"); break;
@@ -1130,10 +1126,11 @@ public class Messenger {
         {
           switch(readChoice())
           {
-            case 1: retMsg = WriteNewMessage(esql, authorisedUser, chatID); break;
-            case 2: retMsg = DeleteMessage(esql, authorisedUser, chatID); break;
-            case 3: retMsg = EditMessage(esql, authorisedUser, chatID); break;
-            case 4: showNumMessages = LoadMessages(showNumMessages); messagesLoaded = true; break;
+            case 1: ShowChatMembers(esql, authorisedUser, chatID); break;
+            case 2: retMsg = WriteNewMessage(esql, authorisedUser, chatID); break;
+            case 3: retMsg = DeleteMessage(esql, authorisedUser, chatID); break;
+            case 4: retMsg = EditMessage(esql, authorisedUser, chatID); break;
+            case 5: showNumMessages = LoadMessages(showNumMessages); messagesLoaded = true; break;
             case 9: inChat = false; break;
                                     
             default : System.out.println("\tInvalid choice!"); break;
@@ -1151,8 +1148,6 @@ public class Messenger {
     }
   } // end EnterChat
 
-
-  //CREATE CHAT MADE BY KOALA
   public static void CreateChat(Messenger esql, String authorisedUser){
     String title = "Create a New Chat";
     DisplayMenuTitle(title);
@@ -1194,8 +1189,8 @@ public class Messenger {
       // This means I need to take care of these special cases in Edit, Delete, Display message.
 
       // display contact list and prompt
-      DisplayContacts(esql, authorisedUser, false);
-      System.out.println("Who do you want to add to the chat? Type 'done' when finished adding.");
+      DisplayContacts(esql,authorisedUser,false);
+      System.out.println("Who do you want to add to the chat from your contact? \nEnter each contact one at a time. Type 'done' when finished adding.");
 
       boolean doneAdding = false;
       int groupSize = 0;
@@ -1208,7 +1203,9 @@ public class Messenger {
         if (newUser.equals("done"))
           break;
  
-        String checkUserQuery = String.format("SELECT ULC.list_member FROM USER_LIST_CONTAINS ULC, USR U WHERE U.contact_list = ULC.list_id AND U.login = '%s' AND ULC.list_member = '%s'", authorisedUser, newUser);
+        String checkUserQuery = String.format(
+          "SELECT ULC.list_member FROM USER_LIST_CONTAINS ULC, USR U " + 
+          "WHERE U.contact_list = ULC.list_id AND U.login = '%s' AND ULC.list_member = '%s'", authorisedUser, newUser);
         int result1 = esql.executeQuery(checkUserQuery);
 
         if (result1 == 0)
@@ -1230,10 +1227,7 @@ public class Messenger {
         String query3 = String.format ("UPDATE chat SET chat_type = 'group' WHERE chat_id = %s", newChatID);
         esql.executeUpdate(query3);
       }
-
       System.out.println("\tChat #" + newChatID + " created.");
-
-
     }
     catch(Exception e)
     {
@@ -1262,7 +1256,7 @@ public class Messenger {
       }
       else
       {
-        DisplayChatTable();
+        DisplayChatTable(false);
 
         String output = "";
         int count = 0;
@@ -1332,16 +1326,45 @@ public class Messenger {
         esql.executeUpdate(query5);
         System.out.println("\tChat #" + chatID + " deleted.");
       }
-
-
     }
-
     catch (Exception e)
     {
       System.err.println(e.getMessage());
     }
 
     DisplayEndTitle(title);
+  }
+
+  public static void ShowChatMembers(Messenger esql,String authorisedUser,int chatID){
+    String menuTitle = "Chat Members";
+    try{
+      String query = "SELECT DISTINCT CL.member FROM CHAT C, CHAT_LIST CL WHERE "+chatID+" = CL.chat_id";
+        List<List<String> > result = esql.executeQueryAndReturnResult(query);
+          if(result.size() == 0){
+            System.out.println("\n\tNo members in chat");
+            DisplayEndTitle(menuTitle);   
+          }else{
+              System.out.println("======================"+menuTitle+"======================\n");
+              System.out.println("\tYou have " + result.size() + " members in chat.");
+
+            String output = "";
+            int count = 0;
+            for(List<String> list : result)
+            {
+              ++count;
+              for(String word : list)
+                // output+="\t"+count +". "+ word.trim() + "\n";
+                output += "\t" + word.trim() + "\n";
+            }
+            System.out.println(output);
+          }
+      }
+      catch(Exception e)
+      {
+        System.err.println (e.getMessage ());
+      }
+
+      DisplayEndTitle(menuTitle);   
   }
 
   /* Call this function to format the messages.
@@ -1463,7 +1486,7 @@ public class Messenger {
       }
   }
   
-  //SHOW CHAT MESSAGES MADE BY KOALA (this one shows all messages in a given chat)
+  //(this one shows all messages in a given chat)
   public static void ShowChatMessages(Messenger esql, String authorisedUser, int chatID, String chatIDChoice, int showNumMessages)
   {
     String menuTitle = "Chat #" + chatIDChoice + " Messages";
@@ -1504,7 +1527,6 @@ public class Messenger {
 
   }
 
-  //WRITE NEW MESSAGE MADE BY KOALA (writes a new message)
   public static String WriteNewMessage(Messenger esql, String authorisedUser, int chatID){
     String menuTitle = "Write a New Message";
     DisplayMenuTitle(menuTitle);
@@ -1788,8 +1810,7 @@ public class Messenger {
     DisplayMenuTitle(title);
     String ret = "";
 
-    try
-    {
+    try{
       // first display users in the chat
         String chatMemberQuery = String.format("SELECT CL.member FROM CHAT_LIST CL WHERE CL.chat_id = %d AND CL.member != '%s'", chatID, authorisedUser);
 
@@ -1858,7 +1879,6 @@ public class Messenger {
         } // end of else
 
     } // end of try
-
     catch (Exception e)
     {
       ret = e.getMessage();
