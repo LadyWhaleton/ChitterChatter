@@ -895,3 +895,4 @@ public class Messenger {
 //
 //   }
 
+// SELECT ULC.list_member FROM user_list_contains ULC, chat_list CL WHERE CL.member NOT IN (SELECT CL2.member FROM chat_list CL2 WHERE CL2.chat_id = chatID);
