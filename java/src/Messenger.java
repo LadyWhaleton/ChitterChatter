@@ -687,18 +687,46 @@ public class Messenger {
       DisplayEndTitle(menuTitle);
    }
 
+   public static void FormatContact(Messenger esql, String contactName)
+   {
+      try
+      {
+        String statusQuery = String.format("SELECT status FROM USR where login = '%s'", contactName);
+        List<List<String>> statusResult = esql.executeQueryAndReturnResult(statusQuery);
+        String tab = "\t\t";
+
+        if (contactName.length() < 8)
+          tab = "\t\t\t";
+
+        String status = statusResult.get(0).get(0);
+
+        if (status == null)
+          status = "";
+        else
+          status = status.trim();
+
+        System.out.println("\t" + contactName.trim() + tab + "Status: " + status);
+      }
+
+      catch (Exception e)
+      {
+        System.err.println ("\t" + e.getMessage ());
+      }
+   }
+
    public static void DisplayContacts(Messenger esql, String authorisedUser, boolean flag)
    {
       try
       {
-        String query = 
-        "SELECT ULC.list_member " +
-        "FROM USER_LIST_CONTAINS ULC, USR U " + 
-        "WHERE U.contact_list = ULC.list_id AND U.login = '" + authorisedUser + "';";
+        String query =
+          "SELECT ULC.list_member " +
+          "FROM USER_LIST_CONTAINS ULC, USR U " + 
+          "WHERE U.contact_list = ULC.list_id AND U.login = '" + authorisedUser + "'";
 
         //Returns # of fitting results
         //HAVE TO USE executeQueryAndReturnResult, no not use executeQuery
         List<List<String>> result = esql.executeQueryAndReturnResult(query);
+
         if(result.size() == 0)
           System.out.println("\tYou have no friends. :(");
         else
@@ -706,22 +734,20 @@ public class Messenger {
           if (flag)
             System.out.println("\tYou have " + result.size() + " friends.\n");
 
-          String output = "";
-          int count = 0;
+          
           for(List<String> list : result)
           {
-            ++count;
-            for(String word : list)
-              // output+="\t"+count +". "+ word.trim() + "\n";
-              output += "\t" + word.trim() + "\n";
+
+            String name = list.get(0).trim();
+            FormatContact(esql,  name);
+
           }
-            System.out.println(output);
         }
       }
       
       catch(Exception e)
       {
-        System.err.println (e.getMessage ());
+        System.err.println ("\t" + e.getMessage ());
       }
    }
 
